@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atajos Pro - Práctica de teclado</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --ok: #10b981;
+      --bad: #ef4444;
+      --accent: #3b82f6;
+      --accent-2: #2563eb;
+      --border: #374151;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(140deg, #0f172a, #0b1225);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+    .title {
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); margin: 0; }
+    .subtitle { color: var(--muted); margin: 6px 0 0; font-size: 0.98rem; }
+
+    .panel {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .mode-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    button, select {
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid #4b5563;
+      color: var(--text);
+      background: #1f2937;
+      padding: 11px 14px;
+    }
+
+    button { cursor: pointer; font-weight: 600; }
+    button:hover { background: #273549; }
+    button.primary { background: var(--accent); border-color: var(--accent-2); }
+    button.primary:hover { background: var(--accent-2); }
+
+    button:focus-visible, select:focus-visible, .toggle:focus-within {
+      outline: 3px solid #60a5fa;
+      outline-offset: 2px;
+    }
+
+    .config {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      align-items: end;
+      margin-top: 8px;
+    }
+
+    .control label { display: block; color: var(--muted); margin-bottom: 6px; }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #111827;
+    }
+
+    .toggle input { width: 18px; height: 18px; }
+
+    .hud {
+      min-height: 64px;
+      max-height: 72px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+    }
+
+    .hud-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .badge {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    .game-card {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: clamp(20px, 5vw, 34px);
+    }
+
+    .prompt {
+      font-size: clamp(1.35rem, 4vw, 2.1rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+
+    .subprompt { color: var(--muted); margin-top: 8px; }
+
+    .detected {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      display: inline-block;
+      min-width: 230px;
+    }
+
+    #detectedBox[hidden] { display: none !important; }
+
+    .feedback {
+      height: 24px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .feedback.ok { color: var(--ok); }
+    .feedback.bad { color: var(--bad); }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .options button { min-height: 52px; }
+
+    .results h2 { margin-top: 0; }
+    .result-score {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 4px 0 10px;
+    }
+
+    .mistakes {
+      margin: 8px 0 14px;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    @media (max-width: 640px) {
+      .app { padding: 10px; }
+      .options { grid-template-columns: 1fr; }
+      .hud { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <section id="homeScreen" class="screen active">
+      <div class="title">
+        <h1>Atajos Pro</h1>
+        <p class="subtitle">Entrená combinaciones de teclado de oficina en minutos.</p>
+      </div>
+
+      <div class="panel">
+        <div class="mode-grid">
+          <button class="primary" data-mode="A">Aprender (Modo A)</button>
+          <button class="primary" data-mode="B">Practicar (Modo B)</button>
+          <button class="primary" data-mode="CAMPAIGN">Campaña</button>
+        </div>
+
+        <div class="config">
+          <div class="control">
+            <label for="questionCount">Cantidad de preguntas</label>
+            <select id="questionCount" aria-label="Cantidad de preguntas">
+              <option value="10" selected>10</option>
+              <option value="14">14</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+
+          <label class="toggle" for="helpToggle">
+            <span>Ayuda en Modo B</span>
+            <input id="helpToggle" type="checkbox" checked />
+          </label>
+
+          <label class="toggle" for="soundToggle">
+            <span>Sonidos</span>
+            <input id="soundToggle" type="checkbox" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="panel hud">
+        <div class="hud-stats">
+          <span class="badge" id="progressLabel">Pregunta 1/10</span>
+          <span class="badge" id="scoreLabel">Correctas 0 · Errores 0</span>
+          <span class="badge" id="streakLabel">Racha 0</span>
+          <span class="badge" id="phaseLabel" hidden>Fase 1</span>
+        </div>
+        <button id="exitBtn">Salir</button>
+      </div>
+
+      <div class="panel game-card">
+        <div>
+          <p class="prompt" id="promptText"></p>
+          <p class="subprompt" id="subPrompt"></p>
+          <div class="detected" id="detectedBox" hidden>Detectado: —</div>
+          <p class="subprompt" id="modeNote"></p>
+          <p class="feedback" id="feedbackText" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="panel" id="answerArea"></div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="panel results">
+        <h2 id="resultTitle">Resultados</h2>
+        <div class="result-score" id="resultScore">0/10</div>
+        <p id="resultMeta" class="subtitle"></p>
+        <h3>Para reforzar</h3>
+        <ul id="mistakeList" class="mistakes"></ul>
+        <div class="row">
+          <button class="primary" id="retryBtn">Reintentar</button>
+          <button id="menuBtn">Volver al menú</button>
+          <button class="primary" id="continueBtn" hidden>Continuar</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Pack fijo de 14 atajos (Oficina básica).
+    const SHORTCUTS = [
+      { action: "Nuevo", combo: "Ctrl+N" },
+      { action: "Abrir", combo: "Ctrl+O" },
+      { action: "Guardar", combo: "Ctrl+S" },
+      { action: "Guardar como (Office)", combo: "F12" },
+      { action: "Imprimir", combo: "Ctrl+P" },
+      { action: "Cerrar documento/pestaña", combo: "Ctrl+W" },
+      { action: "Salir (cerrar ventana)", combo: "Alt+F4" },
+      { action: "Copiar", combo: "Ctrl+C" },
+      { action: "Cortar", combo: "Ctrl+X" },
+      { action: "Pegar", combo: "Ctrl+V" },
+      { action: "Deshacer", combo: "Ctrl+Z" },
+      { action: "Rehacer", combo: "Ctrl+Y" },
+      { action: "Buscar", combo: "Ctrl+F" },
+      { action: "Seleccionar todo", combo: "Ctrl+A" }
+    ];
+
+    // Atajos reservados por el navegador/sistema que no se practican en Modo B.
+    const UNSAFE_IN_BROWSER_MODE_B = new Set(["Alt+F4", "Ctrl+N", "Ctrl+W"]);
+
+    const appState = {
+      view: "home",
+      mode: null,
+      phase: 1,
+      phaseResults: [],
+      totalQuestions: 10,
+      helpModeB: true,
+      soundOn: false,
+      questions: [],
+      index: 0,
+      correct: 0,
+      errors: 0,
+      streak: 0,
+      startedAt: 0,
+      finishedAt: 0,
+      attemptsByAction: {},
+      currentFeedbackTimer: null,
+      currentHintTimer: null,
+      currentDetected: "—"
+    };
+
+    const els = {
+      home: document.getElementById("homeScreen"),
+      game: document.getElementById("gameScreen"),
+      result: document.getElementById("resultScreen"),
+      progress: document.getElementById("progressLabel"),
+      score: document.getElementById("scoreLabel"),
+      streak: document.getElementById("streakLabel"),
+      phase: document.getElementById("phaseLabel"),
+      prompt: document.getElementById("promptText"),
+      subPrompt: document.getElementById("subPrompt"),
+      modeNote: document.getElementById("modeNote"),
+      detected: document.getElementById("detectedBox"),
+      feedback: document.getElementById("feedbackText"),
+      answerArea: document.getElementById("answerArea"),
+      resultTitle: document.getElementById("resultTitle"),
+      resultScore: document.getElementById("resultScore"),
+      resultMeta: document.getElementById("resultMeta"),
+      mistakeList: document.getElementById("mistakeList"),
+      retryBtn: document.getElementById("retryBtn"),
+      menuBtn: document.getElementById("menuBtn"),
+      continueBtn: document.getElementById("continueBtn"),
+      questionCount: document.getElementById("questionCount"),
+      helpToggle: document.getElementById("helpToggle"),
+      soundToggle: document.getElementById("soundToggle"),
+      exitBtn: document.getElementById("exitBtn")
+    };
+
+    const audioCtx = window.AudioContext ? new AudioContext() : null;
+
+    function beep(ok = true) {
+      if (!appState.soundOn || !audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = ok ? 660 : 220;
+      gain.gain.value = 0.035;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.09);
+    }
+
+    function shuffle(arr) {
+      const clone = [...arr];
+      for (let i = clone.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [clone[i], clone[j]] = [clone[j], clone[i]];
+      }
+      return clone;
+    }
+
+    // Genera N preguntas; si N > 14 repite de forma aleatoria.
+    function buildQuestionPool(total, mode) {
+      const baseShortcuts = mode === "B"
+        ? SHORTCUTS.filter((s) => !UNSAFE_IN_BROWSER_MODE_B.has(s.combo))
+        : SHORTCUTS;
+
+      const pool = [];
+      while (pool.length < total) {
+        const mixed = shuffle(baseShortcuts);
+        for (const item of mixed) {
+          if (pool.length < total) pool.push({ ...item });
+        }
+      }
+
+      if (mode === "A") {
+        return pool.map((q) => {
+          const distractors = shuffle(baseShortcuts.filter((s) => s.action !== q.action))
+            .slice(0, 3)
+            .map((s) => s.action);
+          const options = shuffle([q.action, ...distractors]);
+          return { ...q, options };
+        });
+      }
+
+      return pool;
+    }
+
+    function switchScreen(view) {
+      appState.view = view;
+      [els.home, els.game, els.result].forEach((el) => el.classList.remove("active"));
+      if (view === "home") els.home.classList.add("active");
+      if (view === "game") els.game.classList.add("active");
+      if (view === "result") els.result.classList.add("active");
+    }
+
+    function clearTimers() {
+      clearTimeout(appState.currentFeedbackTimer);
+      clearTimeout(appState.currentHintTimer);
+      appState.currentFeedbackTimer = null;
+      appState.currentHintTimer = null;
+    }
+
+    function resetSession() {
+      clearTimers();
+      appState.questions = [];
+      appState.index = 0;
+      appState.correct = 0;
+      appState.errors = 0;
+      appState.streak = 0;
+      appState.currentDetected = "—";
+      appState.attemptsByAction = {};
+      appState.startedAt = 0;
+      appState.finishedAt = 0;
+      els.feedback.textContent = "";
+      els.feedback.className = "feedback";
+      els.detected.textContent = "Detectado: —";
+      els.detected.hidden = true;
+      els.detected.style.display = "none";
+      els.subPrompt.textContent = "";
+      els.modeNote.textContent = "";
+    }
+
+    function initMode(mode, phase = 1) {
+      appState.mode = mode;
+      appState.phase = phase;
+      appState.totalQuestions = Number(els.questionCount.value);
+      appState.helpModeB = els.helpToggle.checked;
+      appState.soundOn = els.soundToggle.checked;
+      resetSession();
+      const questionMode = mode === "CAMPAIGN" ? (phase === 1 ? "A" : "B") : mode;
+      appState.questions = buildQuestionPool(appState.totalQuestions, questionMode);
+      appState.startedAt = Date.now();
+      switchScreen("game");
+      renderQuestion();
+    }
+
+    function currentQuestionMode() {
+      if (appState.mode === "CAMPAIGN") return appState.phase === 1 ? "A" : "B";
+      return appState.mode;
+    }
+
+    function renderHUD() {
+      els.progress.textContent = `Pregunta ${appState.index + 1}/${appState.questions.length}`;
+      els.score.textContent = `Correctas ${appState.correct} · Errores ${appState.errors}`;
+      els.streak.textContent = `Racha ${appState.streak}`;
+      const showPhase = appState.mode === "CAMPAIGN";
+      els.phase.hidden = !showPhase;
+      if (showPhase) {
+        const phaseMode = appState.phase === 1 ? "Modo A" : "Modo B";
+        els.phase.textContent = `Fase ${appState.phase} · ${phaseMode}`;
+      }
+    }
+
+    function renderQuestion() {
+      clearTimers();
+      if (appState.index >= appState.questions.length) {
+        finishRound();
+        return;
+      }
+
+      const q = appState.questions[appState.index];
+      const mode = currentQuestionMode();
+      renderHUD();
+      els.feedback.textContent = "";
+      els.feedback.className = "feedback";
+
+      if (mode === "A") {
+        els.detected.hidden = true;
+        els.detected.style.display = "none";
+        els.modeNote.textContent = "";
+        els.prompt.textContent = `¿Qué hace: ${q.combo}?`;
+        els.subPrompt.textContent = "Elegí la acción correcta.";
+        renderOptions(q.options, (option) => handleAnswer(option === q.action, q));
+      } else {
+        els.prompt.textContent = `Acción: ${q.action}`;
+        els.subPrompt.textContent = "Presioná la combinación ahora…";
+        els.modeNote.textContent = "Nota: algunos atajos del sistema/navegador (ej. Alt+F4, Ctrl+N, Ctrl+W) se practican solo en Modo A porque el navegador los reserva.";
+        els.detected.hidden = false;
+        els.detected.style.display = "inline-block";
+        appState.currentDetected = "—";
+        els.detected.textContent = "Detectado: —";
+        renderPracticeArea();
+        scheduleHint(q);
+      }
+    }
+
+    function renderOptions(options, onClick) {
+      const wrap = document.createElement("div");
+      wrap.className = "options";
+      options.forEach((option) => {
+        const btn = document.createElement("button");
+        btn.textContent = option;
+        btn.addEventListener("click", () => onClick(option));
+        wrap.appendChild(btn);
+      });
+      els.answerArea.innerHTML = "";
+      els.answerArea.appendChild(wrap);
+    }
+
+    function renderPracticeArea() {
+      els.answerArea.innerHTML = "<p class='subprompt'>Esperando combinación de teclas…</p>";
+    }
+
+    function scheduleHint(q) {
+      if (!appState.helpModeB) return;
+      appState.currentHintTimer = setTimeout(() => {
+        if (currentQuestionMode() !== "B") return;
+        if (els.feedback.textContent) return;
+        const main = q.combo.includes("+") ? q.combo.split("+").at(-1) : q.combo;
+        const clue = q.combo.startsWith("Ctrl+")
+          ? "Pista: empieza con Ctrl + …"
+          : q.combo.startsWith("Alt+")
+            ? "Pista: empieza con Alt + …"
+            : `Pista: tecla principal ${main}`;
+        els.subPrompt.textContent = clue;
+      }, 5000);
+    }
+
+    function registerAttempt(q, ok) {
+      const key = q.action;
+      if (!appState.attemptsByAction[key]) {
+        appState.attemptsByAction[key] = { wrong: 0, combo: q.combo };
+      }
+      if (!ok) appState.attemptsByAction[key].wrong += 1;
+    }
+
+    // Spaced repetition simple: si falla en Modo A, repetir una vez cerca del final.
+    function maybeRequeueWrongA(q) {
+      if (currentQuestionMode() !== "A") return;
+      const alreadyRequeued = q._requeued === true;
+      if (alreadyRequeued) return;
+      const clone = { ...q, _requeued: true };
+      const pos = Math.min(appState.questions.length, appState.index + 3 + Math.floor(Math.random() * 2));
+      appState.questions.splice(pos, 0, clone);
+    }
+
+    function handleAnswer(ok, q) {
+      clearTimers();
+      registerAttempt(q, ok);
+      if (ok) {
+        appState.correct += 1;
+        appState.streak += 1;
+        els.feedback.textContent = "✅ Correcto";
+        els.feedback.className = "feedback ok";
+      } else {
+        appState.errors += 1;
+        appState.streak = 0;
+        const correctText = currentQuestionMode() === "A" ? q.action : q.combo;
+        els.feedback.textContent = `❌ Incorrecto. Era: ${correctText}`;
+        els.feedback.className = "feedback bad";
+        maybeRequeueWrongA(q);
+      }
+      beep(ok);
+      renderHUD();
+      appState.currentFeedbackTimer = setTimeout(() => {
+        appState.index += 1;
+        renderQuestion();
+      }, 800);
+    }
+
+    function normalizeComboFromEvent(e) {
+      const key = e.key;
+      const upper = key.length === 1 ? key.toUpperCase() : key.toUpperCase();
+      const isFunction = /^F\d{1,2}$/.test(upper);
+      const main = isFunction ? upper : upper.length === 1 ? upper : upper.replace("KEY", "");
+
+      if (!main || ["CONTROL", "ALT", "SHIFT", "META"].includes(main)) {
+        return null;
+      }
+
+      const parts = [];
+      if (e.ctrlKey) parts.push("Ctrl");
+      if (e.altKey) parts.push("Alt");
+      parts.push(main);
+      return parts.join("+");
+    }
+
+    function shouldPreventBrowserShortcut(e) {
+      const combo = normalizeComboFromEvent(e);
+      if (!combo) return false;
+      const blocked = new Set(SHORTCUTS.map((s) => s.combo));
+      return blocked.has(combo);
+    }
+
+    function onKeyDown(e) {
+      if (appState.view !== "game") return;
+      if (shouldPreventBrowserShortcut(e)) e.preventDefault();
+
+      if (currentQuestionMode() !== "B") return;
+      const q = appState.questions[appState.index];
+      if (!q) return;
+      if (els.feedback.textContent) return;
+
+      const combo = normalizeComboFromEvent(e);
+      if (!combo) return;
+
+      appState.currentDetected = combo;
+      els.detected.textContent = `Detectado: ${combo}`;
+      const ok = combo === q.combo;
+      handleAnswer(ok, q);
+    }
+
+    function finishRound() {
+      appState.finishedAt = Date.now();
+      if (appState.mode === "CAMPAIGN") {
+        const passed = appState.correct / appState.questions.length >= 0.7;
+        appState.phaseResults[appState.phase - 1] = {
+          phase: appState.phase,
+          mode: appState.phase === 1 ? "A" : "B",
+          correct: appState.correct,
+          total: appState.questions.length,
+          durationMs: appState.finishedAt - appState.startedAt,
+          mistakes: { ...appState.attemptsByAction }
+        };
+
+        if (appState.phase === 1 && passed) {
+          showResults({ campaignMid: true, passed });
+          return;
+        }
+      }
+
+      showResults({ campaignMid: false });
+    }
+
+    function showResults({ campaignMid = false, passed = false }) {
+      switchScreen("result");
+      const duration = Math.round((appState.finishedAt - appState.startedAt) / 1000);
+      const total = appState.questions.length;
+
+      if (campaignMid) {
+        els.resultTitle.textContent = passed ? "Fase 1 superada" : "Fase 1 no superada";
+        els.resultScore.textContent = `${appState.correct}/${total}`;
+        els.resultMeta.textContent = `Objetivo: ${Math.ceil(total * 0.7)}/${total} · Tiempo: ${duration}s`;
+        els.continueBtn.hidden = !passed;
+        els.retryBtn.hidden = passed;
+      } else {
+        if (appState.mode === "CAMPAIGN" && appState.phase === 2) {
+          const p1 = appState.phaseResults[0];
+          const p2 = appState.phaseResults[1];
+          const sumCorrect = (p1?.correct || 0) + (p2?.correct || 0);
+          const sumTotal = (p1?.total || 0) + (p2?.total || 0);
+          els.resultTitle.textContent = "Resultados finales de campaña";
+          els.resultScore.textContent = `${sumCorrect}/${sumTotal}`;
+          const t = Math.round(((p1?.durationMs || 0) + (p2?.durationMs || 0)) / 1000);
+          els.resultMeta.textContent = `Fase 1: ${p1.correct}/${p1.total} · Fase 2: ${p2.correct}/${p2.total} · Tiempo total: ${t}s`;
+        } else {
+          els.resultTitle.textContent = "Resultados";
+          els.resultScore.textContent = `${appState.correct}/${total}`;
+          els.resultMeta.textContent = `Tiempo total: ${duration}s`;
+        }
+        els.continueBtn.hidden = true;
+        els.retryBtn.hidden = false;
+      }
+
+      els.mistakeList.innerHTML = "";
+      const mistakes = collectTopMistakes();
+      if (mistakes.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "¡Excelente! No hubo fallos para reforzar.";
+        els.mistakeList.appendChild(li);
+      } else {
+        mistakes.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = `${item.action} — ${item.combo}`;
+          els.mistakeList.appendChild(li);
+        });
+      }
+    }
+
+    function collectTopMistakes() {
+      const merged = {};
+      const sources = [];
+      if (appState.mode === "CAMPAIGN" && appState.phaseResults.length > 0) {
+        sources.push(...appState.phaseResults.map((p) => p.mistakes));
+      } else {
+        sources.push(appState.attemptsByAction);
+      }
+
+      sources.forEach((source) => {
+        Object.entries(source || {}).forEach(([action, data]) => {
+          if (!merged[action]) merged[action] = { action, combo: data.combo, wrong: 0 };
+          merged[action].wrong += data.wrong || 0;
+        });
+      });
+
+      return Object.values(merged)
+        .filter((m) => m.wrong > 0)
+        .sort((a, b) => b.wrong - a.wrong)
+        .slice(0, 4);
+    }
+
+    function retryCurrent() {
+      if (appState.mode === "CAMPAIGN" && appState.phase === 2) {
+        appState.phaseResults = [];
+        initMode("CAMPAIGN", 1);
+        return;
+      }
+      initMode(appState.mode, appState.phase);
+    }
+
+    function goHome() {
+      resetSession();
+      appState.mode = null;
+      appState.phase = 1;
+      appState.phaseResults = [];
+      switchScreen("home");
+      els.retryBtn.hidden = false;
+      els.continueBtn.hidden = true;
+    }
+
+    document.querySelectorAll("[data-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.dataset.mode;
+        appState.phaseResults = [];
+        initMode(mode, 1);
+      });
+    });
+
+    els.exitBtn.addEventListener("click", goHome);
+    els.menuBtn.addEventListener("click", goHome);
+    els.retryBtn.addEventListener("click", retryCurrent);
+    els.continueBtn.addEventListener("click", () => {
+      if (appState.mode === "CAMPAIGN" && appState.phase === 1) {
+        initMode("CAMPAIGN", 2);
+      }
+    });
+
+    document.addEventListener("keydown", onKeyDown, { passive: false });
+  </script>
+</body>
+</html>
